@@ -131,8 +131,16 @@
     <input type="text" id="address" placeholder="Address">
     <input type="text" id="licenseType" placeholder="License Type">
     <input type="text" id="status" placeholder="Status">
-      <input type="number" id="totalFees" placeholder="Total Fees">
-      <input type="number" id="feesPaid" placeholder="Fees Paid">
+    <input type="number" id="totalFees" placeholder="Total Fees">
+    <input type="number" id="feesPaid" placeholder="Fees Paid">
+  </div>
+  <button id="saveBtn" onclick="saveCustomer()">Save Customer</button>
+</div>
+
+<div class="card">
+  <h2>Search</h2>
+  <div class="form-group">
+    <input type="text" id="searchName" placeholder="Search by Name">
     <button onclick="searchCustomer()">Search</button>
     <button class="secondary" onclick="loadAll()">Show All</button>
   </div>
@@ -291,6 +299,8 @@ async function editCustomer(id) {
   feesPaidInput.value = data.fees_paid;
 
   editingId = id;
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.textContent = 'Update Customer';
 }
 
 // DELETE
@@ -313,6 +323,8 @@ function clearForm() {
   statusInput.value = "";
   totalFeesInput.value = "";
   feesPaidInput.value = "";
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.textContent = 'Save Customer';
 }
 
 // make handlers accessible to inline onclick attributes
