@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Driving School Management</title>
+  <meta charset="UTF-8">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      padding: 30px; 
+      background: #f4f6f9; 
+      margin: 0; 
+    }
+    
+    h1 { margin-top: 0; color: #333; margin-bottom: 30px; }
+    
+    h2 { color: #555; margin-top: 30px; margin-bottom: 15px; }
+    
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+    
+    input { 
+      padding: 10px 12px; 
+      width: 180px; 
+      border: 1px solid #ddd; 
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #4CAF50;
+      box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+    }
+    
+    button { 
+      padding: 10px 16px; 
+      margin-top: 5px;
+      cursor: pointer; 
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    button:hover { background: #45a049; }
+    
+    button.secondary {
+      background: #2196F3;
+    }
+    
+    button.secondary:hover { background: #0b7dda; }
+    
+    table { 
+      margin-top: 20px; 
+      border-collapse: collapse; 
+      width: 100%; 
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 14px; 
+      text-align: center; 
+    }
+    
+    th { 
+      background: #333; 
+      color: white; 
+      font-weight: 600;
+    }
+    
+    tr:hover {
+      background: #f9f9f9;
+    }
+    
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-block;
+    }
+    
+    .status-active {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status-inactive {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .status-other {
+      background: #e2e3e5;
+      color: #383d41;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Driving School Management</h1>
+
+<div class="card">
+  <h2>Add / Update Customer</h2>
+  <div class="form-group">
+    <input type="text" id="name" placeholder="Name">
+    <input type="text" id="phone" placeholder="Phone">
+    <input type="text" id="address" placeholder="Address">
+    <input type="text" id="licenseType" placeholder="License Type">
+    <input type="text" id="status" placeholder="Status">
+      <input type="number" id="totalFees" placeholder="Total Fees">
+      <input type="number" id="feesPaid" placeholder="Fees Paid">
+    <button onclick="searchCustomer()">Search</button>
+    <button class="secondary" onclick="loadAll()">Show All</button>
+  </div>
+</div>
+
+<div class="card">
+  <table id="table"></table>
+</div>
+
+<script>
+
+// create a Supabase client (use a distinct variable name to avoid
+// collision with the library object `window.supabase`)
+const supabaseClient = window.supabase.createClient(
+  "https://ppfsexzubwqfpojdqlfb.supabase.co",
+  "sb_publishable_zQho01dnnLSZqX7sUIBrRA_oe9cy535"
+);
+
+// grab references to inputs/table explicitly
+const nameInput = document.getElementById('name');
+const phoneInput = document.getElementById('phone');
+const addressInput = document.getElementById('address');
+const licenseTypeInput = document.getElementById('licenseType');
+const statusInput = document.getElementById('status');
+const totalFeesInput = document.getElementById('totalFees');
+const feesPaidInput = document.getElementById('feesPaid');
+const searchNameInput = document.getElementById('searchName');
+const tableElement = document.getElementById('table');
+
+// expose functions globally so inline handlers can find them once defined below
+
+
+
+let editingId = null;
+
+// ADD OR UPDATE
+async function saveCustomer() {
+
+  const data = {
+    name: nameInput.value,
+    phone: phoneInput.value,
+    address: addressInput.value,
+    license_type: licenseTypeInput.value,
+    status: statusInput.value,
+    total_fees: parseFloat(totalFeesInput.value) || 0,
+    fees_paid: parseFloat(feesPaidInput.value) || 0
+  };
+
+  if (!data.name || data.name.trim() === "") {
+    alert("Name required");
+    return;
+  }
+
+  if (editingId) {
+    await supabaseClient
+      .from("customers")
+      .update(data)
+      .eq("id", editingId);
+
+    editingId = null;
+    alert("Updated");
+  } else {
+    await supabaseClient
+      .from("customers")
+      .insert([data]);
+
+    alert("Added");
+  }
+
+  clearForm();
+  loadAll();
+}
+
+// LOAD ALL
+async function loadAll() {
+  const { data } = await supabaseClient
+    .from("customers")
+    .select("*");
+
+  display(data);
+}
+
+// SEARCH
+async function searchCustomer() {
+  const { data } = await supabaseClient
+    .from("customers")
+    .select("*")
+    .ilike("name", `%${searchNameInput.value}%`);
+
+  display(data);
+}
+
+// DISPLAY TABLE
+function display(data) {
+  let html = `
+    <tr>
+      <th>Name</th>
+      <th>Phone</th>
+      <th>Address</th>
+      <th>License</th>
+      <th>Status</th>
+      <th>Total Fees</th>
+      <th>Fees Paid</th>
+      <th>Remaining</th>
+      <th>Actions</th>
+    </tr>
+  `;
+
+  data.forEach(c => {
+    let statusClass = 'status-other';
+    if (c.status && c.status.toLowerCase() === 'active') {
+      statusClass = 'status-active';
+    } else if (c.status && c.status.toLowerCase() === 'inactive') {
+      statusClass = 'status-inactive';
+    }
+    
+    const totalFees = parseFloat(c.total_fees) || 0;
+    const feesPaid = parseFloat(c.fees_paid) || 0;
+    const remaining = totalFees - feesPaid;
+    
+    html += `
+      <tr>
+        <td>${c.name || ""}</td>
+        <td>${c.phone || ""}</td>
+        <td>${c.address || ""}</td>
+        <td>${c.license_type || ""}</td>
+        <td><span class="status-badge ${statusClass}">${c.status || ""}</span></td>
+        <td>₹${totalFees.toFixed(2)}</td>
+        <td>₹${feesPaid.toFixed(2)}</td>
+        <td>₹${remaining.toFixed(2)}</td>
+        <td>
+          <button onclick="editCustomer(${c.id})">Edit</button>
+          <button onclick="deleteCustomer(${c.id})">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  tableElement.innerHTML = html;
+}
+
+// EDIT
+async function editCustomer(id) {
+  const { data } = await supabaseClient
+    .from("customers")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  nameInput.value = data.name;
+  phoneInput.value = data.phone;
+  addressInput.value = data.address;
+  licenseTypeInput.value = data.license_type;
+  statusInput.value = data.status;
+  totalFeesInput.value = data.total_fees;
+  feesPaidInput.value = data.fees_paid;
+
+  editingId = id;
+}
+
+// DELETE
+async function deleteCustomer(id) {
+  if (confirm("Delete?")) {
+    await supabaseClient
+      .from("customers")
+      .delete()
+      .eq("id", id);
+
+    loadAll();
+  }
+}
+
+function clearForm() {
+  nameInput.value = "";
+  phoneInput.value = "";
+  addressInput.value = "";
+  licenseTypeInput.value = "";
+  statusInput.value = "";
+  totalFeesInput.value = "";
+  feesPaidInput.value = "";
+}
+
+// make handlers accessible to inline onclick attributes
+window.saveCustomer = saveCustomer;
+window.loadAll = loadAll;
+window.searchCustomer = searchCustomer;
+window.editCustomer = editCustomer;
+window.deleteCustomer = deleteCustomer;
+
+loadAll();
+
+</script>
+
+</body>
+</html>
